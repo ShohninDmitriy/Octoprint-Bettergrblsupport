@@ -139,6 +139,11 @@
           </tr>
           <tr>
             <td style="padding: 0px 0px 10px 0px;" colspan=3 align="center">
+              <button class="btn box" data-bind="enable: is_operational() && !is_printing(), click: function() {moveHead('aft')}">
+                <i class="fa fa-arrow-up"></i>
+              </button>
+            </td>
+            <td style="padding: 0px 0px 10px 0px;" colspan=3 align="center">
               <button class="btn box" data-bind="enable: is_operational() && !is_printing(), click: function() {moveHead('up')}">
                 <i class="fa fa-arrow-up"></i>
               </button>
@@ -163,6 +168,11 @@
           </tr>
           <tr>
             <td style="padding: 0px 0px 20px 0px;" colspan=3 align="center">
+              <button class="btn box" data-bind="enable: is_operational() && !is_printing(), click: function() {moveHead('fwd')}">
+                <i class="fa fa-arrow-down"></i>
+              </button>
+            </td>
+            <td style="padding: 0px 0px 10px 0px;" colspan=3 align="center">
               <button class="btn box" data-bind="enable: is_operational() && !is_printing(), click: function() {moveHead('down')}">
                 <i class="fa fa-arrow-down"></i>
               </button>
