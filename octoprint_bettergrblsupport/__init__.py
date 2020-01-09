@@ -883,12 +883,12 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
                 self._printer.commands("G28 X0 Y0")
                 self._printer.commands("G90")
 
-            if direction == "forward":
+            if direction == "aft":
                 self._printer.commands("G91")
                 self._printer.commands("G0 Y{}".format(distance))
                 self._printer.commands("G90")
 
-            if direction == "backward":
+            if direction == "fwd":
                 self._printer.commands("G91")
                 self._printer.commands("G0 Y{}".format(distance * -1))
                 self._printer.commands("G90")
@@ -907,13 +907,17 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
                 self._printer.commands("G91")
                 self._printer.commands("G0 Z{}".format(distance))
                 self._printer.commands("G90")
-
+								
+            if direction == "up":
+                self._printer.commands("G91")
+                self._printer.commands("G1 Z{} F1000".format(distance))
+                self._printer.commands("G90")
+								
             if direction == "down":
                 self._printer.commands("G91")
-                self._printer.commands("G0 Z{}".format(distance * -1))
+                self._printer.commands("G1 Z{} F1000".format(distance * -1))
                 self._printer.commands("G90")
-
-
+								
             return
 
         if command == "origin":
