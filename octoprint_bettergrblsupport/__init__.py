@@ -972,10 +972,10 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
             displayName='Better Grbl Support',
             displayVersion=self._plugin_version,
             type='github_release',
-            user='synman',
+            user='ShohninDmitriy',
             repo='OctoPrint-Bettergrblsupport',
             current=self._plugin_version,
-            pip='https://github.com/synman/OctoPrint-Bettergrblsupport/archive/{target_version}.zip'))
+            pip='https://github.com/ShohninDmitriy/OctoPrint-Bettergrblsupport/archive/{target_version}.zip'))
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
 # ("OctoPrint-PluginSkeleton"), you may define that here. Same goes for the other metadata derived from setup.py that

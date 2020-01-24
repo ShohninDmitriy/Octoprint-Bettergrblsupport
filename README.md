@@ -36,7 +36,7 @@ This plugin was inspired by mic159's Grbl Support plugin (https://plugins.octopr
 Install via the bundled [Plugin Manager](https://github.com/foosel/OctoPrint/wiki/Plugin:-Plugin-Manager)
 or manually using this URL:
 
-    https://github.com/synman/OctoPrint-Bettergrblsupport/archive/master.zip
+    https://github.com/ShohninDmitriy/OctoPrint-Bettergrblsupport/archive/master.zip
 
 ## Configuration
 
