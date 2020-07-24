@@ -15,6 +15,7 @@ import re
 import logging
 import json
 import flask
+import RPi.GPIO as GPIO
 
 class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
                               octoprint.plugin.SimpleApiPlugin,
@@ -106,7 +107,9 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
             overrideM8 = False,
             overrideM9 = False,
             m8Command = "/home/pi/bin/tplink_smartplug.py -t air-assist.shellware.com -c on",
-            m9Command = "/home/pi/bin/tplink_smartplug.py -t air-assist.shellware.com -c off"
+            m9Command = "/home/pi/bin/tplink_smartplug.py -t air-assist.shellware.com -c off",
+            pwrSupplyAvail = False,
+            pwrSupplyPin  = 2
         )
     # def on_settings_initialized(self):
     #     self.hideTempTab = self._settings.get_boolean(["hideTempTab"])
@@ -143,6 +146,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
 
         self.showZ = self._settings.get_boolean(["showZ"])
         self.weakLaserValue = self._settings.get(["weakLaserValue"])
+
 
         # self._settings.global_set_boolean(["feature", "temperatureGraph"], not self.hideTempTab)
         # self._settings.global_set_boolean(["feature", "gCodeVisualizer"], not self.hideGCodeTab)
@@ -775,7 +779,8 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
             homing=[],
             updateGrblSetting=[],
             backupGrblSettings=[],
-            restoreGrblSettings=[]
+            restoreGrblSettings=[],
+            pwrState=['state']
         )
 
     def on_api_command(self, command, data):
@@ -793,7 +798,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
 
         if command == "homing":
             if self.grblPowerLevel > 0 and self.grblState == "Idle":
-                self.toggleWeak();
+                self.toggleWeak()
 
             self._printer.commands("$H")
             return
@@ -824,6 +829,26 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
 
             time.sleep(1)
             return flask.jsonify({'res' : settings})
+        
+        if command == "pwrState":
+            state = data['state']
+            pin = self._settings.get(["pwrSupplyPin"])
+            if state == 'ON':
+                GPIO.output(pin, GPIO.HIGH)
+            elif state == 'OFF':
+                GPIO.output(pin, GPIO.LOW)
+
+            inputTest = GPIO.input(pin)
+            
+            if inputTest == GPIO.HIGH :
+                stateTest = 'ON'
+            elif inputTest == GPIO.LOW:
+                stateTest = 'OFF'
+            else:
+                stateTest = "ERROR : Unknown pwr state"
+            
+            self._logger.info("pwrOn called, for state {stateTest}".format(**locals()))
+            return flask.jsonify({'res' : stateTest })
 
         # catch-all (should revisit state management) for validating printer State
         if not self._printer.is_ready() or self.grblState != "Idle":
@@ -937,6 +962,9 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
         if command == "toggleWeak":
             return flask.jsonify({'res' : self.toggleWeak()})
 
+
+                                                               
+                
     def toggleWeak(self):
         # do laser stuff
         powerLevel = self.grblPowerLevel

@@ -3,6 +3,8 @@
  *
  * Author: Shell M. Shrader
  * License: Apache 2.0
+ * 
+ * forked and updated by Renaud WUCHER
  */
 $(function() {
     function BettergrblsupportViewModel(parameters) {
@@ -46,6 +48,8 @@ $(function() {
       self.power = ko.observable("N/A");
       self.speed = ko.observable("N/A");
 
+      self.onEnable = ko.observable(true);
+
       tab = document.getElementById("tab_plugin_bettergrblsupport_link");
       tab.innerHTML = tab.innerHTML.replace("Better Grbl Support", "Grbl Control");
 
@@ -56,6 +60,34 @@ $(function() {
               return "ratio169";
           }
       });
+      this.pwrState = function(state){
+        $.ajax({
+            url: API_BASEURL + "plugin/bettergrblsupport",
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify({
+              command: "pwrState",
+              state: state
+            }),
+            contentType: "application/json; charset=UTF-8",
+            success: function(data) {
+              self.onEnable(data["res"]=='OFF' ? true:false);
+            },
+            error: function (data, status) {
+              new PNotify({
+                title: "Unable to change pwr state",
+                text: data.responseText,
+                hide: true,
+                buttons: {
+                  sticker: false,
+                  closer: true
+                },
+                type: "error"
+              });
+            }
+          });
+      }
+      self.pwrState(" "); // Calling it once after DOM loaded to ask power state to the server
 
       self.doFrame = function() {
         // toggle power if it is on
@@ -243,6 +275,14 @@ $(function() {
 
           self.power(data.power);
           // console.log("state=" + data.state + " x=" + data.x + " y=" + data.y + " z=" + data.z + " power=" + data.power + " speed=" + data.speed);
+          return
+        }
+        if (plugin == 'bettergrblsupport' && data.type == 'grbl_power_state') {
+          alert("pwrStateFromServer {}".format(data.state));
+          if (data.state == "ON") {
+            self.onEnable(false);
+          }
+
           return
         }
 

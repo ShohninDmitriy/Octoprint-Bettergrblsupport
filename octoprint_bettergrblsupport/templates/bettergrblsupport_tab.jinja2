@@ -3,6 +3,7 @@
     <img id="webcam_image_framing" data-bind="css: { flipH: settings.webcam_flipH(), flipV: settings.webcam_flipV() }" class="flipH flipV" src="/webcam/?action=stream">
 </div> -->
 
+<!-- NO WEBCAM
 <div id="webcam_container_framing">
   <div id="webcam_rotator_framing" data-bind="css: { webcam_rotated: settings.webcam_rotate90(), webcam_unrotated: !settings.webcam_rotate90() }">
     <div class="webcam_fixed_ratio" data-bind="css: webcamFrameRatioClass">
@@ -12,10 +13,18 @@
     </div>
   </div>
 </div>
+-->
+
+
 
 <div class="settings">
   <form class="form-horizontal">
     <div class="settings-group">
+      <div id="Power Supply">
+        <h4>Power state</h4>
+        <button type='button' class="btn btn-success" data-bind="css:{disabled:!onEnable()}, click: function(){pwrState('ON')} ">Turn on</button>
+        <button type='button' class="btn btn-danger"  data-bind="css:{disabled:onEnable}, click: function(){pwrState('OFF')} ">Turn off</button>
+      </div>
       <div class="settings-controls">
         <!-- <h4>Framing</h4> -->
         <table border=0 width="100%" style="padding: 0px 10px 10px 10px;"><tr><td>
