@@ -30,6 +30,8 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
         self.customControls = False
         self.helloCommand = "M5"
         self.statusCommand = "?$G"
+        self.cmdDelay = 0.05
+        self.grblVersion = "unknown"
         self.dwellCommand = "G4 P0"
         self.positionCommand = "?"
         self.suppressM114 = True
@@ -319,10 +321,18 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
 
     # #-- EventHandlerPlugin mix-in
     def on_event(self, event, payload):
-        subscribed_events = Events.FILE_SELECTED + Events.PRINT_STARTED + Events.PRINT_CANCELLED + Events.PRINT_DONE + Events.PRINT_FAILED
+        subscribed_events = Events.FILE_SELECTED + Events.PRINT_STARTED + \
+                            Events.PRINT_CANCELLED + Events.PRINT_DONE + Events.PRINT_FAILED + \
+                            Events.CONNECTED
 
         if subscribed_events.find(event) == -1:
             return
+
+        if event == Events.CONNECTED:
+            if "0.9" in self.grblVersion:
+                self._printer.commands("$10=2")  # set status report to WPos
+            if "1.1" in self.grblVersion:
+                self._printer.commands("$10=0")  # set status report to WPos
 
         # 'PrintStarted'
         if event == Events.PRINT_STARTED:
@@ -479,15 +489,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
             # relative positioning
             self.positioning = 1
 
-        #T2 # HACK:
-        if cmd.upper().lstrip().startswith("X"):
-            match = re.search(r"^X *(-?[\d.]+).*", cmd)
-            if not match is None:
-                command = "G01 " + cmd.upper().strip()
-            else:
-                command = cmd.upper().strip()
-        else:
-            command = cmd.upper().strip()
+        command = cmd.upper().strip()
 
         # keep track of distance traveled
         if command.startswith("G0") or command.startswith("G1") or command.startswith("G2") or command.startswith("G3") or command.startswith("M4"):
@@ -544,6 +546,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
                 if currentTime > self.timeRef + 500:
                     # self._logger.info("x={} y={} z={} f={} s={}".format(self.grblX, self.grblY, self.grblZ, self.grblSpeed, self.grblPowerLevel))
                     self._plugin_manager.send_plugin_message(self._identifier, dict(type="grbl_state",
+                                                                                    grblVersion=self.grblVersion,
                                                                                     state=self.grblState,
                                                                                     x=self.grblX,
                                                                                     y=self.grblY,
@@ -552,6 +555,8 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
                                                                                     power=self.grblPowerLevel))
                     self.timeRef = currentTime
 
+        # sending commands too fast seems to produce errors
+        time.sleep(self.cmdDelay)
         return (command, )
 
     # #-- gcode received hook (
@@ -560,11 +565,14 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
     def hook_gcode_received(self, comm_instance, line, *args, **kwargs):
 
         if line.startswith('Grbl'):
+             match = re.search(r'Grbl (\S*)', line)
+             self.grblVersion = match.groups(1)[0]
+
              # Hack to make Arduino based GRBL work.
              # When the serial port is opened, it resets and the "hello" command
              # is not processed.
              # This makes Octoprint recognise the startup message as a successful connection.
-            return 'ok ' + line
+             return 'ok ' + line
 
         # look for an alarm
         if line.lower().startswith('alarm:'):
@@ -641,6 +649,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
 
             if self.grblState == "Sleep" or self.grblState == "Run":
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="grbl_state",
+                                                                                grblVersion=self.grblVersion,
                                                                                 state=self.grblState,
                                                                                 x=self.grblX,
                                                                                 y=self.grblY,
@@ -657,6 +666,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
             self.grblPowerLevel = round(float(match.groups(1)[1]))
 
             self._plugin_manager.send_plugin_message(self._identifier, dict(type="grbl_state",
+                                                                            grblVersion=self.grblVersion,
                                                                             state=self.grblState,
                                                                             x=self.grblX,
                                                                             y=self.grblY,
@@ -779,6 +789,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
         )
 
     def on_api_command(self, command, data):
+
         if command == "sleep":
             self._printer.commands("$SLP")
             return
@@ -793,7 +804,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
 
         if command == "homing":
             if self.grblPowerLevel > 0 and self.grblState == "Idle":
-                self.toggleWeak();
+                self.toggleWeak()
 
             self._printer.commands("$H")
             return
@@ -826,7 +837,7 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
             return flask.jsonify({'res' : settings})
 
         # catch-all (should revisit state management) for validating printer State
-        if not self._printer.is_ready() or self.grblState != "Idle":
+        if not self._printer.is_ready() and self.grblState != "Idle" and self.grblState != "Run":
             self._logger.info("ignoring move related command - printer is not available")
             return
 
@@ -879,63 +890,30 @@ class BetterGrblSupportPlugin(octoprint.plugin.SettingsPlugin,
             self._logger.debug("move {} {}".format(direction, distance))
 
             if direction == "home":
-                self._printer.commands("G91")
-                self._printer.commands("G28 X0 Y0")
-                self._printer.commands("G90")
+                self._printer.commands("G90 G0 X0 Y0")
 
-            if direction == "aft":
-                self._printer.commands("G91")
-                self._printer.commands("G0 Y{}".format(distance))
-                self._printer.commands("G90")
+            if direction == "forward":
+                self._printer.commands("G91 G0 Y{}".format(distance))
 
-            if direction == "fwd":
-                self._printer.commands("G91")
-                self._printer.commands("G0 Y{}".format(distance * -1))
-                self._printer.commands("G90")
+            if direction == "backward":
+                self._printer.commands("G91 G0 Y{}".format(distance * -1))
 
             if direction == "left":
-                self._printer.commands("G91")
-                self._printer.commands("G0 X{}".format(distance * -1))
-                self._printer.commands("G90")
+                self._printer.commands("G91 G0 X{}".format(distance * -1))
 
             if direction == "right":
-                self._printer.commands("G91")
-                self._printer.commands("G0 X{}".format(distance))
-                self._printer.commands("G90")
+                self._printer.commands("G91 G0 X{}".format(distance))
 
             if direction == "up":
-                self._printer.commands("G91")
-                self._printer.commands("G0 Z{}".format(distance))
-                self._printer.commands("G90")
-								
-            if direction == "up":
-                self._printer.commands("G91")
-                self._printer.commands("G1 Z{} F1000".format(distance))
-                self._printer.commands("G90")
-								
+                self._printer.commands("G91 G0 Z{}".format(distance))
+
             if direction == "down":
-                self._printer.commands("G91")
-                self._printer.commands("G1 Z{} F1000".format(distance * -1))
-                self._printer.commands("G90")
-								
+                self._printer.commands("G91 G0 Z{}".format(distance * -1))
             return
 
         if command == "origin":
             # do origin stuff
-            self.ignoreErrors = True
-
-            self._printer.commands("$10=0")
-            self._printer.commands("G28.1")
             self._printer.commands("G92 X0 Y0 Z0")
-
-            time.sleep(1)
-
-            self._printer.commands("$10=0")
-            self._printer.commands("G28.1")
-            self._printer.commands("G92 X0 Y0 Z0")
-
-            self.ignoreErrors = False
-
             return
 
         if command == "toggleWeak":
