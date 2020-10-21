@@ -4,6 +4,8 @@
 		<div class="control-group">
 				<div class="controls">
 						<label class="checkbox">
+						<input type="checkbox" data-bind="checked: settings.settings.plugins.bettergrblsupport.pwrSupplyAvail"> Enable power supply control *
+						<br>
 						<input type="checkbox" data-bind="checked: settings.settings.plugins.bettergrblsupport.reOrderTabs"> Grbl Control is always first tab *
 						<br>
 						<input type="checkbox" data-bind="checked: settings.settings.plugins.bettergrblsupport.hideTempTab"> Hide the Octoprint Temperature tab *
@@ -82,6 +84,12 @@
 		<label class="control-label">Weak Laser Intensity</label>
 		<div class="controls">
 				<input type="text" class="input-mini" data-bind="value: settings.settings.plugins.bettergrblsupport.weakLaserValue">
+		</div>
+		<br>
+
+		<label class="control-label">Power supply pin (BCM)</label>
+		<div class="controls">
+				<input type="text" class="input-mini" data-bind="value: settings.settings.plugins.bettergrblsupport.pwrSupplyPin">
 		</div>
 
 		<br>
